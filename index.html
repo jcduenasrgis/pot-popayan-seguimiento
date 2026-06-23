@@ -855,6 +855,7 @@ fetch(SHEET_URL)
     render(parsed && parsed.objetos.length > 0 ? parsed : DATA);
   })
   .catch(() => render(DATA));
+  setInterval(() => fetch(SHEET_URL).then(r => r.text()).then(csv => { const p = parseCSV(csv); if(p) render(p); }), 60000);
 </script>
 </body>
 </html>
