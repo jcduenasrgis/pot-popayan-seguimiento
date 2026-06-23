@@ -842,7 +842,9 @@ function showLoading() {
 }
 
 // ── Init — fetch desde Google Sheets ─────────────────────
-const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQYM1tortbPO0k8oCybcGQf1Hh0CjlsqV2qE4rPc6cWaYKlTJyvqynASXoDe3DmssFQODMJv2yHTYMt/pub?gid=221555608&single=true&output=csv';
+const SHEET_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQYM1tortbPO0k8oCybcGQf1Hh0CjlsqV2qE4rPc6cWaYKlTJyvqynASXoDe3DmssFQODMJv2yHTYMt/pub?gid=221555608&single=true&output=csv';
+// Proxy CORS para evitar bloqueos desde GitHub Pages
+const SHEET_URL = 'https://corsproxy.io/?' + encodeURIComponent(SHEET_CSV);
 
 showLoading();
 
