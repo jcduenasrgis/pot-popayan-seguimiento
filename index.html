@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POT Popayán · Seguimiento LADM-COL POT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  /* ── Reset & base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #080F1C;
+    --surface:   #101C30;
+    --card:      #152238;
+    --card-alt:  #0E1B2E;
+    --border:    #1E3550;
+    --teal:      #2E8FA0;
+    --teal-glow: #2E8FA033;
+    --green:     #3DBF82;
+    --yellow:    #F4B942;
+    --red:       #E05252;
+    --text:      #D9E8F5;
+    --text-dim:  #6B8CAD;
+    --text-muted:#3A5472;
+    --mono:      'JetBrains Mono', monospace;
+    --display:   'Barlow Condensed', sans-serif;
+    --body:      'Inter', sans-serif;
+  }
+
+  body {
+    font-family: var(--body);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Cartographic grid pattern */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(46,143,160,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(46,143,160,0.04) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Header ── */
+  header {
+    position: relative; z-index: 1;
+    background: linear-gradient(180deg, #0A1628 0%, var(--surface) 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 28px 0;
+  }
+
+  .header-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .brand-icon {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, var(--teal), #1A6B7A);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+    box-shadow: 0 0 20px var(--teal-glow);
+  }
+
+  .brand-text h1 {
+    font-family: var(--display);
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .brand-text p {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-top: 3px;
+  }
+
+  .header-meta {
+    text-align: right;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: var(--mono);
+  }
+
+  .header-meta span { display: block; line-height: 1.8; }
+  .header-meta strong { color: var(--text-dim); }
+
+  /* Global progress bar */
+  .global-progress {
+    background: var(--card-alt);
+    border-top: 1px solid var(--border);
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .global-label {
+    font-family: var(--display);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  .global-bar-wrap {
+    flex: 1;
+    height: 8px;
+    background: var(--border);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+
+  .global-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, var(--teal), var(--green));
+    transition: width 1.2s cubic-bezier(.4,0,.2,1);
+    box-shadow: 0 0 10px rgba(61,191,130,0.4);
+  }
+
+  .global-pct {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--green);
+    white-space: nowrap;
+    min-width: 48px;
+    text-align: right;
+  }
+
+  /* ── Filters / legend bar ── */
+  .toolbar {
+    position: relative; z-index: 1;
+    padding: 12px 28px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+  }
+
+  .legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .toolbar-right {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: var(--mono);
+  }
+
+  #last-update {
+    color: var(--teal);
+  }
+
+  /* ── Main grid ── */
+  main {
+    position: relative; z-index: 1;
+    padding: 24px 28px 40px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  /* ── Card ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+  }
+
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px var(--teal-glow);
+  }
+
+  /* Side accent bar */
+  .card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent-color, var(--teal));
+    border-radius: 3px 0 0 3px;
+  }
+
+  .card-header {
+    padding: 14px 16px 0 20px;
+  }
+
+  .card-code {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  .card-title {
+    font-family: var(--display);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    line-height: 1.2;
+    color: var(--text);
+  }
+
+  /* Donut area */
+  .donut-wrap {
+    padding: 16px 24px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .donut-wrap canvas {
+    max-width: 140px;
+    max-height: 140px;
+  }
+
+  .donut-center {
+    position: absolute;
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .donut-pct {
+    font-family: var(--mono);
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1;
+    display: block;
+  }
+
+  .donut-label {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  /* Indicators */
+  .indicators {
+    padding: 0 16px 16px 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .ind {
+    background: var(--card-alt);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+
+  .ind-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  .ind-value {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .ind-value.yes  { color: var(--green); }
+  .ind-value.no   { color: var(--red); }
+  .ind-value.num  { color: var(--text); }
+
+  /* Mini progress bar within card */
+  .mini-bar-wrap {
+    grid-column: 1 / -1;
+    background: var(--card-alt);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+
+  .mini-bar-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .mini-bar-track {
+    height: 4px;
+    background: var(--border);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+
+  .mini-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 1.4s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* Status badge */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-family: var(--mono);
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 99px;
+    margin-top: 6px;
+    letter-spacing: 0.04em;
+  }
+
+  .status-0   { background: rgba(224,82,82,0.15);  color: var(--red);    border: 1px solid rgba(224,82,82,0.3); }
+  .status-25  { background: rgba(224,82,82,0.1);   color: var(--yellow); border: 1px solid rgba(244,185,66,0.3); }
+  .status-50  { background: rgba(244,185,66,0.1);  color: var(--yellow); border: 1px solid rgba(244,185,66,0.3); }
+  .status-75  { background: rgba(61,191,130,0.1);  color: var(--green);  border: 1px solid rgba(61,191,130,0.3); }
+  .status-100 { background: rgba(61,191,130,0.15); color: var(--green);  border: 1px solid rgba(61,191,130,0.4); }
+
+  /* ── Footer ── */
+  footer {
+    position: relative; z-index: 1;
+    text-align: center;
+    padding: 20px;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: var(--mono);
+    border-top: 1px solid var(--border);
+  }
+
+  footer strong { color: var(--text-dim); }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    header, .toolbar, main { padding-left: 16px; padding-right: 16px; }
+    .global-progress { padding: 12px 16px; gap: 12px; }
+    .brand-text h1 { font-size: 17px; }
+    .grid { grid-template-columns: 1fr; gap: 12px; }
+    .header-meta { display: none; }
+  }
+
+  /* ── Animations ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .card { animation: fadeUp 0.5s ease both; }
+  .card:nth-child(1)  { animation-delay: 0.05s; }
+  .card:nth-child(2)  { animation-delay: 0.10s; }
+  .card:nth-child(3)  { animation-delay: 0.15s; }
+  .card:nth-child(4)  { animation-delay: 0.20s; }
+  .card:nth-child(5)  { animation-delay: 0.25s; }
+  .card:nth-child(6)  { animation-delay: 0.30s; }
+  .card:nth-child(7)  { animation-delay: 0.35s; }
+  .card:nth-child(8)  { animation-delay: 0.40s; }
+  .card:nth-child(9)  { animation-delay: 0.45s; }
+  .card:nth-child(10) { animation-delay: 0.50s; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card { animation: none; }
+    .global-bar-fill, .mini-bar-fill { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div class="brand">
+      <div class="brand-icon">🗺️</div>
+      <div class="brand-text">
+        <h1>POT Popayán · LADM-COL POT</h1>
+        <p>Tablero de Seguimiento — Objetos Territoriales Principales</p>
+      </div>
+    </div>
+    <div class="header-meta">
+      <span><strong>Municipio:</strong> Popayán, Cauca</span>
+      <span><strong>Estándar:</strong> LADM-COL POT v2.0</span>
+      <span><strong>Coordinación:</strong> Ing. Liliam</span>
+      <span><strong>Actualizado:</strong> <span id="last-update">—</span></span>
+    </div>
+  </div>
+
+  <div class="global-progress">
+    <span class="global-label">Avance Global</span>
+    <div class="global-bar-wrap">
+      <div class="global-bar-fill" id="global-bar" style="width:0%"></div>
+    </div>
+    <span class="global-pct" id="global-pct">0%</span>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> Sin iniciar (0%)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div> En progreso (25–75%)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Completado (100%)</div>
+  <div class="toolbar-right">
+    Objetos: <strong style="color:var(--text-dim)">10 UAB</strong> &nbsp;|&nbsp;
+    Norma: <strong style="color:var(--teal)">Res. MinVivienda 58/2025</strong>
+  </div>
+</div>
+
+<main>
+  <div class="grid" id="grid"></div>
+</main>
+
+<footer>
+  <strong>POT Popayán</strong> · Seguimiento LADM-COL POT v2.0 &nbsp;·&nbsp;
+  Resolución MinVivienda 58 de 2025 &nbsp;·&nbsp; ISO 19152 &nbsp;·&nbsp;
+  Revisión y Ajuste POT Popayán
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  DATA — Edita este objeto para actualizar el tablero.
+//  Para conectar a Google Sheets, reemplaza con fetch().
+// ═══════════════════════════════════════════════════════════
+const DATA = {
+  lastUpdate: "2026-06-23",
+  objetos: [
+    {
+      codigo: "POT_UAB_ClasificacionSuelo",
+      nombre: "Clasificación del Suelo",
+      descripcion: "Urbano / Rural / Expansión urbana",
+      rrrDiligenciado: false,
+      validacionSIG: false,
+      capasTotal: 3,
+      capasListas: 0,
+      avancePct: 0,
+    },
+    {
+      codigo: "POT_UAB_ZonificacionSueloRural",
+      nombre: "Zonificación Suelo Rural",
+      descripcion: "Uso principal, categoría rural, usos compatibles",
+      rrrDiligenciado: false,
+      validacionSIG: false,
+      capasTotal: 4,
+      capasListas: 0,
+      avancePct: 0,
+    },
+    {
+      codigo: "POT_UAB_AreasActividad",
+      nombre: "Áreas de Actividad",
+      descripcion: "Uso principal urbano: Residencial, Comercial, Industrial…",
+      rrrDiligenciado: false,
+      validacionSIG: false,
+      capasTotal: 5,
+      capasListas: 0,
+      avancePct: 0,
+    },
+    {
+      codigo: "POT_UAB_SueloProteccionUrbano",
+      nombre: "Suelo de Protección Urbano",
+      descripcion: "Ambiental, Infraestructura, Patrimonio, Riesgo no mitigable",
+      rrrDiligenciado: false,
+      validacionSIG: false,
+      capasTotal: 4,
+      capasListas: 0,
+      avancePct: 0,
+    },
+    {
+      codigo: "POT_UAB_TratamientoUrbanistico",
+      nombre: "Tratamiento Urbanístico",
+      descripcion: "Desarrollo, Consolidación, Renovación, Conservación…",
+      rrrDiligenciado: false,
+      validacionSIG: false,
+      capasTotal: 5,
+      capasListas: 0,
+      avancePct: 0,
+    },
+    {
+      codigo: "POT_UAB_SistemasGenerales",
+      nombre: "Sistemas Generales",
+      descripcion: "Equipamientos, Espacio Público, Servicios Públicos, Vías",
+      rrrDiligenciado: false,
+      validacionSIG: false,
+      capasTotal: 6,
+      capasListas: 0,
+      avancePct: 0,
+    },
+    {
+      codigo: "POT_UAB_ZonificacionAmenaza",
+      nombre: "Zonificación de Amenaza",
+      descripcion: "Fenómeno + Categoría Alta/Media/Baja · Dcto. 1077/2015",
+      rrrDiligenciado: false,
+      validacionSIG: false,
+      capasTotal: 3,
+      capasListas: 0,
+      avancePct: 0,
+    },
+    {
+      codigo: "POT_UAB_AreaCondicionAmenaza",
+      nombre: "Área en Condición de Amenaza",
+      descripcion: "Amenaza alta/media + desarrollo previsto + medida de intervención",
+      rrrDiligenciado: false,
+      validacionSIG: false,
+      capasTotal: 3,
+      capasListas: 0,
+      avancePct: 0,
+    },
+    {
+      codigo: "POT_UAB_AreaCondicionRiesgo",
+      nombre: "Área en Condición de Riesgo",
+      descripcion: "Amenaza alta con elementos expuestos urbanizados/edificados",
+      rrrDiligenciado: false,
+      validacionSIG: false,
+      capasTotal: 2,
+      capasListas: 0,
+      avancePct: 0,
+    },
+    {
+      codigo: "POT_UAB_CentroPobladoRural",
+      nombre: "Centro Poblado Rural",
+      descripcion: "≥20 viviendas contiguas en zona rural. Requiere Nombre y Código",
+      rrrDiligenciado: false,
+      validacionSIG: false,
+      capasTotal: 2,
+      capasListas: 0,
+      avancePct: 0,
+    },
+  ]
+};
+
+// ── Color helpers ─────────────────────────────────────────
+function colorForPct(pct) {
+  if (pct === 0)        return { arc: '#E05252', glow: 'rgba(224,82,82,0.5)' };
+  if (pct < 50)         return { arc: '#F4B942', glow: 'rgba(244,185,66,0.5)' };
+  if (pct < 100)        return { arc: '#2E8FA0', glow: 'rgba(46,143,160,0.5)' };
+  return                       { arc: '#3DBF82', glow: 'rgba(61,191,130,0.5)' };
+}
+
+function statusClass(pct) {
+  if (pct === 0)   return 'status-0';
+  if (pct <= 25)   return 'status-25';
+  if (pct <= 75)   return 'status-50';
+  if (pct < 100)   return 'status-75';
+  return 'status-100';
+}
+
+function statusLabel(pct) {
+  if (pct === 0)   return '● Sin iniciar';
+  if (pct <= 25)   return '◑ Iniciado';
+  if (pct <= 75)   return '◑ En progreso';
+  if (pct < 100)   return '◕ Avanzado';
+  return '● Completado';
+}
+
+function miniBarColor(pct) {
+  if (pct === 0)   return 'var(--red)';
+  if (pct < 50)    return 'var(--yellow)';
+  if (pct < 100)   return 'var(--teal)';
+  return 'var(--green)';
+}
+
+// ── Card builder ──────────────────────────────────────────
+function buildCard(obj, index) {
+  const col = colorForPct(obj.avancePct);
+  const capasAvance = obj.capasTotal > 0
+    ? Math.round((obj.capasListas / obj.capasTotal) * 100)
+    : 0;
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.style.setProperty('--accent-color', col.arc);
+
+  card.innerHTML = `
+    <div class="card-header">
+      <div class="card-code">${obj.codigo}</div>
+      <div class="card-title">${obj.nombre}</div>
+      <span class="status-badge ${statusClass(obj.avancePct)}">${statusLabel(obj.avancePct)}</span>
+    </div>
+
+    <div class="donut-wrap">
+      <canvas id="chart-${index}" width="140" height="140"></canvas>
+      <div class="donut-center">
+        <span class="donut-pct" style="color:${col.arc}" id="pct-${index}">0%</span>
+        <span class="donut-label">avance</span>
+      </div>
+    </div>
+
+    <div class="indicators">
+      <div class="ind">
+        <div class="ind-label">Formato RRR</div>
+        <div class="ind-value ${obj.rrrDiligenciado ? 'yes' : 'no'}">
+          ${obj.rrrDiligenciado ? '✓ Sí' : '✗ No'}
+        </div>
+      </div>
+      <div class="ind">
+        <div class="ind-label">Validación SIG</div>
+        <div class="ind-value ${obj.validacionSIG ? 'yes' : 'no'}">
+          ${obj.validacionSIG ? '✓ Sí' : '✗ No'}
+        </div>
+      </div>
+      <div class="ind">
+        <div class="ind-label">Capas</div>
+        <div class="ind-value num">${obj.capasListas} / ${obj.capasTotal}</div>
+      </div>
+      <div class="ind">
+        <div class="ind-label">Estado capas</div>
+        <div class="ind-value num" style="color:${miniBarColor(capasAvance)}">${capasAvance}%</div>
+      </div>
+      <div class="mini-bar-wrap">
+        <div class="mini-bar-label">
+          <span>Avance capas</span>
+          <span style="color:${miniBarColor(capasAvance)}">${obj.capasListas}/${obj.capasTotal} listas</span>
+        </div>
+        <div class="mini-bar-track">
+          <div class="mini-bar-fill" id="mini-${index}" style="width:0%; background:${miniBarColor(capasAvance)}"></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  return { card, capasAvance, col };
+}
+
+// ── Donut chart ───────────────────────────────────────────
+function buildChart(index, pct, col) {
+  const ctx = document.getElementById(`chart-${index}`).getContext('2d');
+  const remaining = Math.max(0, 100 - pct);
+
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: pct === 0 ? [1] : [pct, remaining],
+        backgroundColor: pct === 0
+          ? ['rgba(58,84,114,0.5)']
+          : [col.arc, 'rgba(30,53,80,0.5)'],
+        borderColor: 'transparent',
+        borderWidth: 0,
+        hoverOffset: 0,
+        hoverBorderWidth: 0,
+      }]
+    },
+    options: {
+      cutout: '72%',
+      responsive: true,
+      animation: {
+        animateRotate: true,
+        duration: 1200,
+        easing: 'easeOutQuart',
+      },
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      events: [],
+    }
+  });
+
+  // Animate the percentage counter
+  const el = document.getElementById(`pct-${index}`);
+  let start = 0;
+  const step = () => {
+    start += Math.ceil((pct - start) / 8) || (start < pct ? 1 : 0);
+    el.textContent = start + '%';
+    if (start < pct) requestAnimationFrame(step);
+  };
+  setTimeout(step, 200 + index * 50);
+}
+
+// ── Render ────────────────────────────────────────────────
+function render(data) {
+  // Timestamp
+  document.getElementById('last-update').textContent = data.lastUpdate;
+
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+
+  const charts = [];
+
+  data.objetos.forEach((obj, i) => {
+    const { card, capasAvance, col } = buildCard(obj, i);
+    grid.appendChild(card);
+    charts.push({ i, pct: obj.avancePct, col, capasAvance });
+  });
+
+  // Build charts after DOM insertion
+  requestAnimationFrame(() => {
+    charts.forEach(({ i, pct, col, capasAvance }) => {
+      buildChart(i, pct, col);
+      // Animate mini bar
+      setTimeout(() => {
+        const mb = document.getElementById(`mini-${i}`);
+        if (mb) mb.style.width = capasAvance + '%';
+      }, 300 + i * 50);
+    });
+  });
+
+  // Global progress
+  const total = data.objetos.length;
+  const globalPct = total > 0
+    ? Math.round(data.objetos.reduce((s, o) => s + o.avancePct, 0) / total)
+    : 0;
+
+  setTimeout(() => {
+    document.getElementById('global-bar').style.width = globalPct + '%';
+    const gEl = document.getElementById('global-pct');
+    let g = 0;
+    const gStep = () => {
+      g += Math.ceil((globalPct - g) / 8) || (g < globalPct ? 1 : 0);
+      gEl.textContent = g + '%';
+      if (g < globalPct) requestAnimationFrame(gStep);
+    };
+    gStep();
+  }, 100);
+}
+
+// ── Init ──────────────────────────────────────────────────
+// Para conectar a Google Sheets publicado como CSV:
+//
+// const SHEET_URL = 'https://docs.google.com/spreadsheets/d/TU_ID/pub?gid=0&single=true&output=csv';
+// fetch(SHEET_URL)
+//   .then(r => r.text())
+//   .then(csv => {
+//     const data = parseCSV(csv); // parsear y mapear a la estructura DATA
+//     render(data);
+//   });
+//
+// Por ahora usa datos locales:
+render(DATA);
+</script>
+</body>
+</html>
