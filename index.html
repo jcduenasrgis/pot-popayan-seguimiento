@@ -768,19 +768,91 @@ function render(data) {
   }, 100);
 }
 
-// ── Init ──────────────────────────────────────────────────
-// Para conectar a Google Sheets publicado como CSV:
-//
-// const SHEET_URL = 'https://docs.google.com/spreadsheets/d/TU_ID/pub?gid=0&single=true&output=csv';
-// fetch(SHEET_URL)
-//   .then(r => r.text())
-//   .then(csv => {
-//     const data = parseCSV(csv); // parsear y mapear a la estructura DATA
-//     render(data);
-//   });
-//
-// Por ahora usa datos locales:
-render(DATA);
+// ── Mapa base de objetos (orden y metadata fija) ──────────
+const OBJETOS_BASE = [
+  { codigo: "POT_UAB_ClasificacionSuelo",       nombre: "Clasificación del Suelo",         capasTotal: 3 },
+  { codigo: "POT_UAB_ZonificacionSueloRural",   nombre: "Zonificación Suelo Rural",        capasTotal: 4 },
+  { codigo: "POT_UAB_AreasActividad",           nombre: "Áreas de Actividad",              capasTotal: 5 },
+  { codigo: "POT_UAB_SueloProteccionUrbano",    nombre: "Suelo de Protección Urbano",      capasTotal: 4 },
+  { codigo: "POT_UAB_TratamientoUrbanistico",   nombre: "Tratamiento Urbanístico",         capasTotal: 5 },
+  { codigo: "POT_UAB_SistemasGenerales",        nombre: "Sistemas Generales",              capasTotal: 6 },
+  { codigo: "POT_UAB_ZonificacionAmenaza",      nombre: "Zonificación de Amenaza",         capasTotal: 3 },
+  { codigo: "POT_UAB_AreaCondicionAmenaza",     nombre: "Área en Condición de Amenaza",    capasTotal: 3 },
+  { codigo: "POT_UAB_AreaCondicionRiesgo",      nombre: "Área en Condición de Riesgo",     capasTotal: 2 },
+  { codigo: "POT_UAB_CentroPobladoRural",       nombre: "Centro Poblado Rural",            capasTotal: 2 },
+];
+
+// ── Parser CSV ────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return null;
+
+  const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+
+  const iObjeto  = headers.findIndex(h => h.toLowerCase().includes('objeto territorial'));
+  const iPct     = headers.findIndex(h => h.toLowerCase().includes('porcentaje'));
+  const iRRR     = headers.findIndex(h => h.toLowerCase().includes('rrr'));
+  const iSIG     = headers.findIndex(h => h.toLowerCase().includes('validacion') || h.toLowerCase().includes('validación'));
+  const iCapTot  = headers.findIndex(h => h.toLowerCase().includes('total de capas'));
+  const iCapList = headers.findIndex(h => h.toLowerCase().includes('capas listas'));
+  const iStamp   = headers.findIndex(h => h.toLowerCase().includes('marca'));
+
+  const mapaRespuestas = {};
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(',');
+    const clean = cols.map(c => (c || '').replace(/"/g, '').trim());
+    const codigo = clean[iObjeto] || '';
+    if (!codigo) continue;
+    mapaRespuestas[codigo] = {
+      avancePct:       parseInt(clean[iPct])  || 0,
+      rrrDiligenciado: (clean[iRRR]  || '').toLowerCase().startsWith('s'),
+      validacionSIG:   (clean[iSIG]  || '').toLowerCase().startsWith('s'),
+      capasTotal:      parseInt(clean[iCapTot])  || 0,
+      capasListas:     parseInt(clean[iCapList]) || 0,
+      timestamp:       clean[iStamp] || '',
+    };
+  }
+
+  const timestamps = Object.values(mapaRespuestas).map(r => r.timestamp).filter(Boolean);
+  const lastUpdate = timestamps.length
+    ? timestamps[timestamps.length - 1].split(' ')[0]
+    : new Date().toISOString().split('T')[0];
+
+  const objetos = OBJETOS_BASE.map(base => {
+    const resp = mapaRespuestas[base.codigo] || {};
+    return {
+      codigo:          base.codigo,
+      nombre:          base.nombre,
+      descripcion:     '',
+      avancePct:       resp.avancePct       != null ? resp.avancePct       : 0,
+      rrrDiligenciado: resp.rrrDiligenciado != null ? resp.rrrDiligenciado : false,
+      validacionSIG:   resp.validacionSIG   != null ? resp.validacionSIG   : false,
+      capasTotal:      resp.capasTotal > 0  ? resp.capasTotal : base.capasTotal,
+      capasListas:     resp.capasListas      != null ? resp.capasListas     : 0,
+    };
+  });
+
+  return { lastUpdate, objetos };
+}
+
+// ── Loading / error states ────────────────────────────────
+function showLoading() {
+  document.getElementById('grid').innerHTML =
+    '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-dim);font-family:var(--mono);font-size:13px;"><div style=\"font-size:28px;margin-bottom:12px;\">⟳</div>Cargando datos desde Google Sheets…</div>';
+}
+
+// ── Init — fetch desde Google Sheets ─────────────────────
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQYM1tortbPO0k8oCybcGQf1Hh0CjlsqV2qE4rPc6cWaYKlTJyvqynASXoDe3DmssFQODMJv2yHTYMt/pub?gid=221555608&single=true&output=csv';
+
+showLoading();
+
+fetch(SHEET_URL)
+  .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+  .then(csv => {
+    const parsed = parseCSV(csv);
+    render(parsed && parsed.objetos.length > 0 ? parsed : DATA);
+  })
+  .catch(() => render(DATA));
 </script>
 </body>
 </html>
