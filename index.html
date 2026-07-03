@@ -838,7 +838,16 @@ function parseCSV(text) {
 
   const mapaRespuestas = {};
   for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(',');
+    // Parser robusto: respeta comas dentro de campos entre comillas
+    const cols = [];
+    let cur = '', inQ = false;
+    for (let ci = 0; ci < lines[i].length; ci++) {
+      const ch = lines[i][ci];
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { cols.push(cur); cur = ''; }
+      else { cur += ch; }
+    }
+    cols.push(cur);
     const clean = cols.map(c => (c || '').replace(/"/g, '').trim());
     const codigo = clean[iObjeto] || '';
     if (!codigo) continue;
