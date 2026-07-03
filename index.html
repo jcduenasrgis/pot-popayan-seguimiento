@@ -393,6 +393,39 @@
 
   footer strong { color: var(--text-dim); }
 
+
+  /* Observaciones */
+  .obs-wrap {
+    grid-column: 1 / -1;
+    background: rgba(244,185,66,0.06);
+    border: 1px solid rgba(244,185,66,0.25);
+    border-left: 3px solid var(--yellow);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-top: 2px;
+  }
+
+  .obs-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--yellow);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .obs-text {
+    font-family: var(--body);
+    font-size: 10px;
+    line-height: 1.45;
+    color: var(--text-dim);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
   /* ── Responsive ── */
   @media (max-width: 600px) {
     header, .toolbar, main { padding-left: 16px; padding-right: 16px; }
@@ -440,7 +473,7 @@
     <div class="header-meta">
       <span><strong>Municipio:</strong> Popayán, Cauca</span>
       <span><strong>Estándar:</strong> LADM-COL POT v2.0</span>
-      <span><strong>Coordinación:</strong> Ing. Liliam Zapata</span>
+      <span><strong>Coordinación:</strong> Ing. Liliam</span>
       <span><strong>Actualizado:</strong> <span id="last-update">—</span></span>
     </div>
   </div>
@@ -672,6 +705,11 @@ function buildCard(obj, index) {
           <div class="mini-bar-fill" id="mini-${index}" style="width:0%; background:${miniBarColor(capasAvance)}"></div>
         </div>
       </div>
+      ${obj.observaciones ? `
+      <div class="obs-wrap">
+        <div class="obs-label">📌 Observaciones</div>
+        <div class="obs-text">${obj.observaciones}</div>
+      </div>` : ''}
     </div>
   `;
 
@@ -796,6 +834,7 @@ function parseCSV(text) {
   const iCapTot  = headers.findIndex(h => h.toLowerCase().includes('total de capas'));
   const iCapList = headers.findIndex(h => h.toLowerCase().includes('capas listas'));
   const iStamp   = headers.findIndex(h => h.toLowerCase().includes('marca'));
+  const iObs     = headers.findIndex(h => h.toLowerCase().includes('observacion') || h.toLowerCase().includes('observación'));
 
   const mapaRespuestas = {};
   for (let i = 1; i < lines.length; i++) {
@@ -809,6 +848,7 @@ function parseCSV(text) {
       validacionSIG:   (clean[iSIG]  || '').toLowerCase().startsWith('s'),
       capasTotal:      parseInt(clean[iCapTot])  || 0,
       capasListas:     parseInt(clean[iCapList]) || 0,
+      observaciones:   iObs >= 0 ? (clean[iObs] || '') : '',
       timestamp:       clean[iStamp] || '',
     };
   }
@@ -829,6 +869,7 @@ function parseCSV(text) {
       validacionSIG:   resp.validacionSIG   != null ? resp.validacionSIG   : false,
       capasTotal:      resp.capasTotal > 0  ? resp.capasTotal : base.capasTotal,
       capasListas:     resp.capasListas      != null ? resp.capasListas     : 0,
+      observaciones:   resp.observaciones || '',
     };
   });
 
@@ -855,7 +896,6 @@ fetch(SHEET_URL)
     render(parsed && parsed.objetos.length > 0 ? parsed : DATA);
   })
   .catch(() => render(DATA));
-  setInterval(() => fetch(SHEET_URL).then(r => r.text()).then(csv => { const p = parseCSV(csv); if(p) render(p); }), 60000);
 </script>
 </body>
 </html>
