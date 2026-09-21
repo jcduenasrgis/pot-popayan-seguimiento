@@ -891,10 +891,7 @@ function showLoading() {
     '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-dim);font-family:var(--mono);font-size:13px;"><div style=\"font-size:28px;margin-bottom:12px;\">⟳</div>Cargando datos desde Google Sheets…</div>';
 }
 
-// ── Init — fetch desde Google Sheets ─────────────────────
-const SHEET_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQYM1tortbPO0k8oCybcGQf1Hh0CjlsqV2qE4rPc6cWaYKlTJyvqynASXoDe3DmssFQODMJv2yHTYMt/pub?gid=221555608&single=true&output=csv';
-// Proxy CORS para evitar bloqueos desde GitHub Pages
-const SHEET_URL = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(SHEET_CSV);
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1JLuSUyKw6LqKEvPvbvcamz8zC-88_4s0jf2wlIJtSA8/gviz/tq?tqx=out:csv&gid=221555608';
 
 showLoading();
 
